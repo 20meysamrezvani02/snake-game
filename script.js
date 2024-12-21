@@ -1,126 +1,137 @@
-// تنظیمات بازی
-const canvas = document.getElementById("game-board");
+const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
+const touchArea = document.getElementById("touch-area");
+const scoreDisplay = document.getElementById("score");
 
-// اندازه‌ها
-const gridSize = 10;
-const canvasSize = 300;
-const snakeSpeed = 100; // میلی‌ثانیه بین هر حرکت
+const gridSize = 20;
+const canvasSize = 400;
+const gridCount = canvasSize / gridSize;
 
-// وضعیت بازی
-let snake = [{ x: 50, y: 50 }];
-let food = { x: 0, y: 0 };
-let direction = "RIGHT";
-let score = 0;
+let snake = [{ x: 5, y: 5 }];
+let direction = 'RIGHT';
+let food = generateFood();
+let score = 0;  // متغیر برای نگهداری امتیاز
 let gameInterval;
+let speed = 130;  // مدت زمان بین فریم‌ها برای تنظیم سرعت بازی (هر 100 میلی‌ثانیه یک فریم)
 
-// شروع بازی
-function startGame() {
-    score = 0;
-    snake = [{ x: 50, y: 50 }];
-    direction = "RIGHT";
-    generateFood();
-    clearInterval(gameInterval);
-    gameInterval = setInterval(gameLoop, snakeSpeed);
-}
-
-// رسم صفحه بازی
-function gameLoop() {
-    moveSnake();
-    if (isGameOver()) {
-        alert("بازی تمام شد! امتیاز شما: " + score);
-        startGame();
-        return;
-    }
-    draw();
-}
-
-// حرکت مار
-function moveSnake() {
-    const head = { ...snake[0] };
-
-    switch (direction) {
-        case "UP":
-            head.y -= gridSize;
-            break;
-        case "DOWN":
-            head.y += gridSize;
-            break;
-        case "LEFT":
-            head.x -= gridSize;
-            break;
-        case "RIGHT":
-            head.x += gridSize;
-            break;
-    }
-
-    snake.unshift(head);
-
-    // برخورد با غذا
-    if (head.x === food.x && head.y === food.y) {
-        score += 10;
-        generateFood();
-    } else {
-        snake.pop();
-    }
-}
-
-// بررسی برخورد با دیوار یا بدن مار
-function isGameOver() {
-    const head = snake[0];
-
-    // برخورد با دیوار
-    if (head.x < 0 || head.x >= canvasSize || head.y < 0 || head.y >= canvasSize) {
-        return true;
-    }
-
-    // برخورد با بدن مار
-    for (let i = 1; i < snake.length; i++) {
-        if (head.x === snake[i].x && head.y === snake[i].y) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-// رسم صفحه
-function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // رسم مار
-    snake.forEach(segment => {
-        ctx.fillStyle = "green";
-        ctx.fillRect(segment.x, segment.y, gridSize, gridSize);
-    });
-
-    // رسم غذا
-    ctx.fillStyle = "red";
-    ctx.fillRect(food.x, food.y, gridSize, gridSize);
-
-    // رسم امتیاز
-    document.getElementById("score").innerText = "امتیاز: " + score;
-}
-
-// تولید مکان تصادفی برای غذا
 function generateFood() {
-    const x = Math.floor(Math.random() * (canvasSize / gridSize)) * gridSize;
-    const y = Math.floor(Math.random() * (canvasSize / gridSize)) * gridSize;
-    food = { x, y };
+  const x = Math.floor(Math.random() * gridCount);
+  const y = Math.floor(Math.random() * gridCount);
+  return { x, y };
 }
 
-// کنترل جهت حرکت مار با دکمه‌ها
-document.addEventListener("keydown", event => {
-    if (event.key === "ArrowUp" && direction !== "DOWN") {
-        direction = "UP";
-    } else if (event.key === "ArrowDown" && direction !== "UP") {
-        direction = "DOWN";
-    } else if (event.key === "ArrowLeft" && direction !== "RIGHT") {
-        direction = "LEFT";
-    } else if (event.key === "ArrowRight" && direction !== "LEFT") {
-        direction = "RIGHT";
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // رسم غذا
+  ctx.fillStyle = 'Yellow';
+  ctx.fillRect(food.x * gridSize, food.y * gridSize, gridSize, gridSize);
+
+  // رسم مار
+  // سر مار با رنگ متفاوت
+  ctx.fillStyle = 'white';  // رنگ سر مار
+  ctx.fillRect(snake[0].x * gridSize, snake[0].y * gridSize, gridSize, gridSize);
+
+  // بدن مار با رنگ متفاوت
+  ctx.fillStyle = 'green';  // رنگ بدن مار
+  for (let i = 1; i < snake.length; i++) {
+    ctx.fillRect(snake[i].x * gridSize, snake[i].y * gridSize, gridSize, gridSize);
+  }
+
+  // حرکت مار
+  let head = { ...snake[0] };
+  if (direction === 'UP') head.y--;
+  if (direction === 'DOWN') head.y++;
+  if (direction === 'LEFT') head.x--;
+  if (direction === 'RIGHT') head.x++;
+
+  // برخورد با دیوار و بازگشت از طرف مخالف
+  if (head.x < 0) head.x = gridCount - 1;  // برخورد با دیوار چپ
+  if (head.x >= gridCount) head.x = 0;     // برخورد با دیوار راست
+  if (head.y < 0) head.y = gridCount - 1;  // برخورد با دیوار بالا
+  if (head.y >= gridCount) head.y = 0;     // برخورد با دیوار پایین
+
+  snake.unshift(head);
+  if (head.x === food.x && head.y === food.y) {
+    food = generateFood();
+    score += 10;  // افزایش امتیاز
+    scoreDisplay.textContent = `امتیاز: ${score}`;  // به روز رسانی نمایش امتیاز
+
+    // افزایش سرعت بازی پس از خوردن غذا
+    speed = Math.max(50, speed - 10);  // سرعت را کاهش دهید تا بازی سریعتر شود (حداقل 50 میلی‌ثانیه)
+    clearInterval(gameInterval);  // متوقف کردن تایمر قبلی
+    gameInterval = setInterval(draw, speed);  // شروع تایمر جدید با سرعت بالاتر
+  } else {
+    snake.pop();
+  }
+
+  // بررسی برخورد مار با خود
+  if (isCollision(head)) {
+    clearInterval(gameInterval);
+    alert(`بازی تمام شد! امتیاز شما: ${score}`);
+  }
+}
+
+function isCollision(head) {
+  for (let i = 1; i < snake.length; i++) {
+    if (head.x === snake[i].x && head.y === snake[i].y) {
+      return true;
     }
+  }
+  return false;
+}
+
+function startGame() {
+  gameInterval = setInterval(draw, speed);
+}
+
+// متغیرها برای ذخیره موقعیت‌های لمسی
+let startX = 0;
+let startY = 0;
+let isTouching = false;
+
+// تشخیص جهت کشیدن انگشت برای تغییر جهت حرکت مار
+function handleTouchMove(event) {
+  if (!isTouching) return;
+
+  const touchX = event.touches[0].clientX;
+  const touchY = event.touches[0].clientY;
+
+  const deltaX = touchX - startX;
+  const deltaY = touchY - startY;
+
+  if (Math.abs(deltaX) > Math.abs(deltaY)) {
+    if (deltaX > 0 && direction !== 'LEFT') {
+      direction = 'RIGHT';
+    } else if (deltaX < 0 && direction !== 'RIGHT') {
+      direction = 'LEFT';
+    }
+  } else {
+    if (deltaY > 0 && direction !== 'UP') {
+      direction = 'DOWN';
+    } else if (deltaY < 0 && direction !== 'DOWN') {
+      direction = 'UP';
+    }
+  }
+
+  // به روزرسانی موقعیت شروع برای حرکت بعدی
+  startX = touchX;
+  startY = touchY;
+}
+
+// شروع ردیابی لمسی
+touchArea.addEventListener('touchstart', (event) => {
+  isTouching = true;
+  startX = event.touches[0].clientX;
+  startY = event.touches[0].clientY;
 });
 
-// شروع بازی به طور خودکار
+// پایان ردیابی لمسی
+touchArea.addEventListener('touchend', () => {
+  isTouching = false;
+});
+
+// ردیابی حرکت‌های لمسی
+touchArea.addEventListener('touchmove', handleTouchMove);
+
 startGame();
